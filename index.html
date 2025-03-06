@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.K新聞</title>
+    <style>
+        body { font-family: "Arial", sans-serif; background: white; color: black; margin: 0; padding: 20px; }
+        .newspaper { max-width: 800px; margin: 0 auto; padding: 20px; border: 2px solid black; background: #f8f8f8; }
+        h1 { text-align: center; font-size: 2em; }
+        #version { text-align: center; font-size: 1em; margin-bottom: 5px; }
+        #date { text-align: center; font-size: 1.2em; margin-bottom: 10px; }
+        .article { border-bottom: 1px solid black; padding: 10px 0; }
+        .title { font-weight: bold; font-size: 1.5em; }
+        .content { font-size: 1.1em; }
+        button { background: black; color: white; border: none; padding: 10px; cursor: pointer; margin-top: 5px; }
+        button:hover { background: gray; }
+        .controls { margin-top: 10px; text-align: center; }
+        .save-btn { background: darkred; }
+        .save-btn:hover { background: red; }
+    </style>
+</head>
+<body>
+
+    <div class="newspaper">
+        <h1>S.K新聞</h1>
+        <div id="version">バージョン: 1</div>
+        <div id="date"></div>
+        <div id="news"></div>
+
+        <iframe width="560" height="315" src="https://www.youtube.com/watch?v=bgoObNaPDEc" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+        
+        <!-- 🎛 速度・ピッチ調整スライダー -->
+        <div class="controls">
+            <label>🔊 速度: <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1"></label>
+            <label>🎵 ピッチ: <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1"></label>
+        </div>
+        
+        <!-- 💾 保存ボタン -->
+        <div class="controls">
+            <button class="save-btn" onclick="saveNewspaper()">💾 新聞を保存</button>
+            <button onclick="loadNewspaper()">📜 保存した新聞を見る</button>
+        </div>
+    </div>
+
+    <script>
+        let version = localStorage.getItem("newspaperVersion") || 1;
+        document.getElementById("version").textContent = `バージョン: ${version}`;
+
+        // 🕒 日付・時刻表示
+        function updateTime() {
+            const now = new Date();
+            document.getElementById("date").textContent = now.toLocaleString("ja-JP");
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // 📰 NHKニュース取得
+        async function fetchNews() {
+            const url = "https://www3.nhk.or.jp/rss/news/cat0.xml";
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, "text/xml");
+                const items = xml.querySelectorAll("item");
+
+                let newsHTML = "";
+                items.forEach((item, index) => {
+                    if (index >= 5) return;
+                    const title = item.querySelector("title").textContent;
+                    const description = item.querySelector("description").textContent;
+                    newsHTML += `
+                        <div class="article">
+                            <div class="title">${title}</div>
+                            <div class="content">${description}</div>
+                            <button onclick="speak('${title} ${description}')">📢 読み上げ</button>
+                        </div>
+                    `;
+                });
+                document.getElementById("news").innerHTML = newsHTML;
+
+                // ✅ バージョンを更新
+                version++;
+                localStorage.setItem("newspaperVersion", version);
+                document.getElementById("version").textContent = `バージョン: ${version}`;
+            } catch (error) {
+                console.error("ニュース取得失敗:", error);
+                document.getElementById("news").innerHTML = "<p>ニュースを取得できませんでした。</p>";
+            }
+        }
+
+        // 🔊 音声読み上げ機能
+        function speak(text) {
+            const synth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = "ja-JP";
+            utterance.rate = document.getElementById("rate").value;
+            utterance.pitch = document.getElementById("pitch").value;
+            synth.speak(utterance);
+        }
+
+        // 💾 新聞を保存
+        function saveNewspaper() {
+            const newspaperContent = document.getElementById("news").innerHTML;
+            localStorage.setItem("savedNewspaper", newspaperContent);
+            alert("新聞を保存しました！");
+        }
+
+        // 📜 保存した新聞を表示
+        function loadNewspaper() {
+            const savedNewspaper = localStorage.getItem("savedNewspaper");
+            if (savedNewspaper) {
+                document.getElementById("news").innerHTML = savedNewspaper;
+                alert("保存した新聞を表示しました！");
+            } else {
+                alert("保存された新聞がありません。");
+            }
+        }
+
+
+  // 🖨 新聞をPDFで保存
+  function saveAsPDF() {
+            window.print();
+        }
+
+        // ⏳ 10分ごとにニュースを更新
+        fetchNews();
+        setInterval(fetchNews, 600000);
+
+    </script>
+
+</body>
+</html>
+
+                               ©s.k会社.co.jp
