@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>RETRO NHK NEWS TERMINAL</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      color: #00ff00;
+      font-family: monospace;
+      overflow: hidden;
+    }
+    #crt {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        0deg, rgba(0,255,0,0.03), rgba(0,255,0,0.03) 2px, transparent 2px, transparent 4px
+      );
+      pointer-events: none;
+      mix-blend-mode: overlay;
+      z-index: 100;
+    }
+    #screen {
+      padding: 1em;
+      z-index: 1;
+      position: relative;
+    }
+    .news-item {
+      margin-bottom: 1em;
+    }
+    input[type="text"] {
+      background: black;
+      color: #00ff00;
+      border: none;
+      font-family: monospace;
+      font-size: 1em;
+      width: 100%;
+    }
+    a {
+      color: #00ff00;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div id="screen">
+    <p>RETRO-OS v1.0 - NHK NEWS TERMINAL</p>
+    <p>コマンドを入力してください: <input id="command" type="text" autofocus /></p>
+    <div id="output"></div>
+  </div>
+  <div id="crt"></div>
+
+  <script>
+    const commandInput = document.getElementById("command");
+    const output = document.getElementById("output");
+
+    commandInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        const cmd = commandInput.value.trim().toLowerCase();
+        output.innerHTML = "";
+        if (cmd === "news") {
+          output.innerHTML = "<p>NHKニュースを取得中...</p>";
+          const news = await fetchRSS("https://www3.nhk.or.jp/rss/news/cat0.xml");
+          displayNews(news);
+        } else {
+          output.innerHTML = `<p>不明なコマンド: ${cmd}</p>`;
+        }
+        commandInput.value = "";
+      }
+    });
+
+    async function fetchRSS(url) {
+      try {
+        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(data.contents, "text/xml");
+        const items = Array.from(xml.querySelectorAll("item"));
+        return items.map(item => ({
+          title: item.querySelector("title").textContent,
+          link: item.querySelector("link").textContent,
+          pubDate: item.querySelector("pubDate").textContent
+        }));
+      } catch (err) {
+        return [{ title: "ニュースの取得に失敗しました。", link: "", pubDate: "" }];
+      }
+    }
+
+    function displayNews(newsItems) {
+      output.innerHTML = "";
+      newsItems.forEach(n => {
+        const div = document.createElement("div");
+        div.className = "news-item";
+        div.innerHTML = `<p>📰 <strong>${n.title}</strong></p><p>${n.pubDate}</p><p><a href="${n.link}" target="_blank">[続きを読む]</a></p>`;
+        output.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
+
+newsと入力すると、NHKのRSSフィードから最新ニュースを取得し、表示します。
+  </script>
+<!--     } else {
